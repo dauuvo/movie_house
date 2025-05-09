@@ -1,69 +1,93 @@
 import useSWR from "swr";
+import {
+  Container,
+  Typography,
+  Card,
+  CardContent,
+  List,
+  ListItem,
+  ListItemText,
+  CircularProgress,
+  Alert,
+} from "@mui/material";
+import { useTheme } from "@mui/material/styles";
+import Layout from "../../components/Layout";
 
 const fetcher = (url) => fetch(url).then((res) => res.json());
 
 export default function DirectorsPage() {
-  const { data, error } = useSWR("/api/director", fetcher);
+  const { data: directorsData, error: directorsError } = useSWR(
+    "/api/directors",
+    fetcher
+  );
+  const { data: moviesData, error: moviesError } = useSWR(
+    "/api/movies",
+    fetcher
+  );
 
-  if (error)
+  if (directorsError || moviesError) {
     return (
-      <div style={{ padding: "20px", color: "#fff" }}>
-        Failed to load directors.
-      </div>
+      <Layout>
+        <Container>
+          <Alert severity="error">Failed to load data</Alert>
+        </Container>
+      </Layout>
     );
-  if (!data)
-    return <div style={{ padding: "20px", color: "#fff" }}>Loading...</div>;
+  }
 
-  const { directors, movies } = data;
+  if (!directorsData || !moviesData) {
+    return (
+      <Layout>
+        <Container
+          style={{
+            display: "flex",
+            justifyContent: "center",
+            alignItems: "center",
+            height: "80vh",
+          }}
+        >
+          <CircularProgress />
+        </Container>
+      </Layout>
+    );
+  }
 
   return (
-    <div
-      style={{
-        padding: "40px",
-        backgroundColor: "#121212",
-        minHeight: "100vh",
-        fontFamily: "Arial, sans-serif",
-        color: "#fff",
-      }}
-    >
-      <h1 style={{ textAlign: "center", marginBottom: "30px", color: "#fff" }}>
-        Directors
-      </h1>
+    <Layout>
+      <Container maxWidth="lg" sx={{ py: 4 }}>
+        <Typography variant="h3" component="h1" gutterBottom>
+          Directors
+        </Typography>
 
-      {directors.map((director) => {
-        const directedMovies = movies.filter(
-          (movie) => movie.directorId === director.id
-        );
+        {directorsData.map((director) => {
+          const directedMovies = moviesData.filter(
+            (movie) => movie.directorId === director.id
+          );
 
-        return (
-          <div
-            key={director.id}
-            style={{
-              marginBottom: "30px",
-              padding: "20px",
-              backgroundColor: "#1e1e1e",
-              border: "1px solid #333",
-              borderRadius: "8px",
-              boxShadow: "0 2px 8px rgba(255, 255, 255, 0.05)",
-            }}
-          >
-            <h2 style={{ color: "#fff", marginBottom: "10px" }}>
-              {director.name}
-            </h2>
-            <p style={{ color: "#ccc", marginBottom: "10px" }}>
-              <strong>Biography:</strong> {director.biography}
-            </p>
-            <p style={{ color: "#ccc", marginBottom: "6px" }}>
-              <strong>Movies Directed:</strong>
-            </p>
-            <ul style={{ paddingLeft: "20px", color: "#bbb" }}>
-              {directedMovies.map((movie) => (
-                <li key={movie.id}>{movie.title}</li>
-              ))}
-            </ul>
-          </div>
-        );
-      })}
-    </div>
+          return (
+            <Card key={director.id} sx={{ mb: 4 }}>
+              <CardContent>
+                <Typography variant="h5" component="h2" gutterBottom>
+                  {director.name}
+                </Typography>
+                <Typography variant="body1" paragraph>
+                  <strong>Biography:</strong> {director.biography}
+                </Typography>
+                <Typography variant="subtitle1" gutterBottom>
+                  <strong>Movies Directed:</strong>
+                </Typography>
+                <List dense>
+                  {directedMovies.map((movie) => (
+                    <ListItem key={movie.id}>
+                      <ListItemText primary={movie.title} />
+                    </ListItem>
+                  ))}
+                </List>
+              </CardContent>
+            </Card>
+          );
+        })}
+      </Container>
+    </Layout>
   );
 }

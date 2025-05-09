@@ -1,6 +1,7 @@
 import fs from "fs";
 import path from "path";
 import { useRouter } from "next/router";
+import Layout from "../components/Layout";
 
 export async function getStaticProps() {
   const filePath = path.join(process.cwd(), "data", "data.json");
@@ -21,32 +22,34 @@ export default function HomePage({ data }) {
   };
 
   return (
-    <div>
-      <h1>Trending Movies</h1>
-      {movies
-        .filter((movie) => movie.rating > 8.0)
-        .map((movie) => (
-          <div
-            key={movie.id}
-            style={{
-              border: "1px solid #ccc",
-              margin: "10px",
-              padding: "10px",
-            }}
-          >
-            <h3>{movie.title}</h3>
-            <p>
-              <strong>Description:</strong> {movie.description}
-            </p>
-            <p>
-              <strong>Release Year:</strong> {movie.releaseYear}
-            </p>
-            <p>
-              <strong>Rating:</strong> {movie.rating}
-            </p>
-          </div>
-        ))}
-      <button onClick={browseGenres}>Browse Genres</button>
-    </div>
+    <Layout>
+      <div>
+        <h1>Trending Movies</h1>
+        {movies
+          .filter((movie) => movie.rating > 8.0)
+          .map((movie) => (
+            <div
+              key={movie.id}
+              style={{
+                border: "1px solid #ccc",
+                margin: "10px",
+                padding: "10px",
+              }}
+            >
+              <h3>{movie.title}</h3>
+              <p>
+                <strong>Description:</strong> {movie.description}
+              </p>
+              <p>
+                <strong>Release Year:</strong> {movie.releaseYear}
+              </p>
+              <p>
+                <strong>Rating:</strong> {movie.rating}
+              </p>
+            </div>
+          ))}
+        <button onClick={browseGenres}>Browse Genres</button>
+      </div>
+    </Layout>
   );
 }

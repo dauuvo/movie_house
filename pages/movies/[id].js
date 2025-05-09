@@ -1,66 +1,83 @@
-import fs from "fs";
-import path from "path";
+import { useRouter } from "next/router";
+import useSWR from "swr";
+import {
+  Container,
+  Typography,
+  Card,
+  CardContent,
+  Button,
+  Chip,
+  CircularProgress,
+  Alert,
+} from "@mui/material";
+import Layout from "../../components/Layout";
 import Link from "next/link";
 
-export async function getStaticPaths() {
-  const filePath = path.join(process.cwd(), "data", "data.json");
-  const fileContents = fs.readFileSync(filePath, "utf8");
-  const data = JSON.parse(fileContents);
+const fetcher = (url) => fetch(url).then((res) => res.json());
 
-  const paths = data.movies.map((movie) => ({
-    params: { id: movie.id.toString() },
-  }));
+export default function MovieDetailPage() {
+  const router = useRouter();
+  const { id } = router.query;
 
-  return {
-    paths,
-    fallback: "blocking",
-  };
-}
+  const { data, error } = useSWR(id ? `/api/movies/${id}` : null, fetcher);
 
-export async function getStaticProps({ params }) {
-  const filePath = path.join(process.cwd(), "data", "data.json");
-  const fileContents = fs.readFileSync(filePath, "utf8");
-  const data = JSON.parse(fileContents);
-
-  const movie = data.movies.find((m) => m.id.toString() === params.id);
-  const director = movie
-    ? data.directors.find((d) => d.id === movie.directorId)
-    : null;
-
-  if (!movie) {
-    return {
-      notFound: true,
-    };
+  if (error) {
+    return (
+      <Layout>
+        <Container>
+          <Alert severity="error">Failed to load movie</Alert>
+        </Container>
+      </Layout>
+    );
   }
 
-  return {
-    props: {
-      movie,
-      directorName: director ? director.name : "Unknown",
-    },
-    revalidate: 10,
-  };
-}
+  if (!data) {
+    return (
+      <Layout>
+        <Container
+          style={{
+            display: "flex",
+            justifyContent: "center",
+            alignItems: "center",
+            height: "80vh",
+          }}
+        >
+          <CircularProgress />
+        </Container>
+      </Layout>
+    );
+  }
 
-export default function MovieDetailPage({ movie, directorName }) {
   return (
-    <div style={{ padding: "20px" }}>
-      <h1>{movie.title}</h1>
-      <p>
-        <strong>Description:</strong> {movie.description}
-      </p>
-      <p>
-        <strong>Release Year:</strong> {movie.releaseYear}
-      </p>
-      <p>
-        <strong>Rating:</strong> {movie.rating}
-      </p>
-      <p>
-        <strong>Director:</strong> {directorName}{" "}
-        <Link href={`/movies/${movie.id}/director`}>
-          <button style={{ marginLeft: "10px" }}>View Director Info</button>
-        </Link>
-      </p>
-    </div>
+    <Layout>
+      <Container maxWidth="lg" sx={{ py: 4 }}>
+        <Card>
+          <CardContent>
+            <Typography variant="h3" component="h1" gutterBottom>
+              {data.title}
+            </Typography>
+
+            <div style={{ display: "flex", gap: "10px", marginBottom: "20px" }}>
+              <Chip label={`Year: ${data.releaseYear}`} />
+              <Chip label={`Rating: ${data.rating}`} color="primary" />
+            </div>
+
+            <Typography variant="body1" paragraph>
+              {data.description}
+            </Typography>
+
+            <Typography variant="h6" gutterBottom>
+              <strong>Director:</strong> {data.directorName}
+            </Typography>
+
+            <Link href={`/movies/${id}/director`} passHref>
+              <Button variant="contained" sx={{ mt: 2 }}>
+                View Director Info
+              </Button>
+            </Link>
+          </CardContent>
+        </Card>
+      </Container>
+    </Layout>
   );
 }

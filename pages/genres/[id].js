@@ -1,58 +1,112 @@
-import fs from "fs";
-import path from "path";
+import { useRouter } from "next/router";
+import useSWR from "swr";
+import {
+  Container,
+  Typography,
+  Card,
+  CardContent,
+  CardActionArea,
+  Chip,
+  CircularProgress,
+  Alert,
+} from "@mui/material";
+import Layout from "../../components/Layout";
+import Link from "next/link";
 
-export async function getServerSideProps(context) {
-  const { id } = context.params;
+const fetcher = (url) => fetch(url).then((res) => res.json());
 
-  const filePath = path.join(process.cwd(), "data", "data.json");
-  const fileContents = fs.readFileSync(filePath, "utf8");
-  const data = JSON.parse(fileContents);
+export default function GenreMoviesPage() {
+  const router = useRouter();
+  const { id } = router.query;
 
-  const genre = data.genres.find((g) => g.id.toString() === id);
-  const movies = data.movies.filter((movie) => movie.genreId.toString() === id);
+  const { data: genreData, error: genreError } = useSWR(
+    id ? `/api/genres/${id}/movies` : null,
+    fetcher
+  );
+  const { data: allGenres, error: genresError } = useSWR(
+    "/api/genres",
+    fetcher
+  );
 
-  if (!genre) {
-    return {
-      notFound: true,
-    };
+  if (genreError || genresError) {
+    return (
+      <Layout>
+        <Container>
+          <Alert severity="error">Failed to load data</Alert>
+        </Container>
+      </Layout>
+    );
   }
 
-  return {
-    props: {
-      genreName: genre.name,
-      movies,
-    },
-  };
-}
+  if (!genreData || !allGenres) {
+    return (
+      <Layout>
+        <Container
+          style={{
+            display: "flex",
+            justifyContent: "center",
+            alignItems: "center",
+            height: "80vh",
+          }}
+        >
+          <CircularProgress />
+        </Container>
+      </Layout>
+    );
+  }
 
-export default function GenreMoviesPage({ genreName, movies }) {
+  const genre = allGenres.find((g) => g.id === id);
+
   return (
-    <div style={{ padding: "20px", color: "white", backgroundColor: "#111" }}>
-      <h1>Genre: {genreName}</h1>
-      {movies.length === 0 ? (
-        <p>No movies found in this genre.</p>
-      ) : (
-        movies.map((movie) => (
+    <Layout>
+      <Container maxWidth="lg" sx={{ py: 4 }}>
+        <Typography variant="h3" component="h1" gutterBottom>
+          Genre: {genre?.name || "Unknown"}
+        </Typography>
+
+        {genreData.length === 0 ? (
+          <Typography variant="body1">
+            No movies found in this genre.
+          </Typography>
+        ) : (
           <div
-            key={movie.id}
             style={{
-              border: "1px solid #444",
-              padding: "10px",
-              marginBottom: "10px",
-              backgroundColor: "#222",
-              borderRadius: "4px",
+              display: "grid",
+              gridTemplateColumns: "repeat(auto-fill, minmax(300px, 1fr))",
+              gap: "20px",
             }}
           >
-            <h3>{movie.title}</h3>
-            <p>
-              <strong>Release Year:</strong> {movie.releaseYear}
-            </p>
-            <p>
-              <strong>Rating:</strong> {movie.rating}
-            </p>
+            {genreData.map((movie) => (
+              <Link key={movie.id} href={`/movies/${movie.id}`} passHref>
+                <Card>
+                  <CardActionArea>
+                    <CardContent>
+                      <Typography gutterBottom variant="h5" component="div">
+                        {movie.title}
+                      </Typography>
+                      <Typography
+                        variant="body2"
+                        color="text.secondary"
+                        paragraph
+                      >
+                        {movie.description}
+                      </Typography>
+                      <div>
+                        <Chip
+                          label={`Year: ${movie.releaseYear}`}
+                          size="small"
+                          sx={{ mr: 1 }}
+                        />
+                        <Chip label={`Rating: ${movie.rating}`} size="small" />
+                      </div>
+                    </CardContent>
+                  </CardActionArea>
+                </Card>
+              </Link>
+            ))}
           </div>
-        ))
-      )}
-    </div>
+        )}
+      </Container>
+    </Layout>
   );
 }
